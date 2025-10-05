@@ -7,17 +7,18 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import net.minecraft.component.ComponentType;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ChargedProjectilesComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
+import net.minecraft.entity.projectile.thrown.EggEntity;
 import net.minecraft.entity.projectile.thrown.SnowballEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.world.World;
 import net.minecraft.entity.EntityType;
 
@@ -31,11 +32,12 @@ public abstract class CrossbowItemMixin {
 	}
 
 	@Inject(at = @At("RETURN"), method = { "getHeldProjectiles", "getProjectiles" }, cancellable = true)
-	private void getHeldProjectiles(CallbackInfoReturnable<Predicate<ItemStack>> cir) {
+	private void getProjectiles(CallbackInfoReturnable<Predicate<ItemStack>> cir) {
 		Predicate<ItemStack> original = cir.getReturnValue();
 		cir.setReturnValue(original
 				.or(stack -> isExplosiveFireworkRocket(stack))
 				.or(stack -> stack.isOf(Items.SNOWBALL))
+				.or(stack -> stack.isIn(ItemTags.EGGS))
 				.or(stack -> stack.isOf(Items.WIND_CHARGE)));
 	}
 
@@ -47,6 +49,14 @@ public abstract class CrossbowItemMixin {
 					shooter.getZ(), projectileStack);
 			snowballEntity.setOwner(shooter);
 			cir.setReturnValue(snowballEntity);
+			return;
+		}
+
+		if (projectileStack.isIn(ItemTags.EGGS)) {
+			EggEntity eggEntity = new EggEntity(world, shooter.getX(), shooter.getEyeY() - 0.15F,
+					shooter.getZ(), projectileStack);
+			eggEntity.setOwner(shooter);
+			cir.setReturnValue(eggEntity);
 			return;
 		}
 
@@ -69,15 +79,35 @@ public abstract class CrossbowItemMixin {
 	private static void getSpeed(ChargedProjectilesComponent stack, CallbackInfoReturnable<Float> cir) {
 		if (stack.contains(Items.SNOWBALL)) {
 			cir.setReturnValue(2.6F);
-		} else if (stack.contains(Items.WIND_CHARGE)) {
+			return;
+		}
+
+		if (stack.getProjectiles().stream().anyMatch(itemstack -> itemstack.isIn(ItemTags.EGGS))) {
+			cir.setReturnValue(2.6F);
+			return;
+		}
+
+		if (stack.contains(Items.WIND_CHARGE)) {
 			cir.setReturnValue(2.0F);
+			return;
 		}
 	}
 
 	@Inject(at = @At("HEAD"), method = "getWeaponStackDamage", cancellable = true)
 	private void getWeaponStackDamage(ItemStack ammo, CallbackInfoReturnable<Integer> cir) {
-		if (ammo.isOf(Items.SNOWBALL) || ammo.isOf(Items.WIND_CHARGE)) {
+		if (ammo.isOf(Items.SNOWBALL)) {
 			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isIn(ItemTags.EGGS)) {
+			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.WIND_CHARGE)) {
+			cir.setReturnValue(1);
+			return;
 		}
 	}
 }
