@@ -7,6 +7,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import net.minecraft.component.ComponentType;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ChargedProjectilesComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -21,10 +23,20 @@ import net.minecraft.entity.EntityType;
 
 @Mixin(CrossbowItem.class)
 public abstract class CrossbowItemMixin {
-	@Inject(at = @At("RETURN"), method = "getHeldProjectiles", cancellable = true)
+	private static boolean isExplosiveFireworkRocket(ItemStack stack) {
+		if (!stack.isOf(Items.FIREWORK_ROCKET)) {
+			return false;
+		}
+		return stack.get(DataComponentTypes.FIREWORKS).explosions().size() > 0;
+	}
+
+	@Inject(at = @At("RETURN"), method = { "getHeldProjectiles", "getProjectiles" }, cancellable = true)
 	private void getHeldProjectiles(CallbackInfoReturnable<Predicate<ItemStack>> cir) {
 		Predicate<ItemStack> original = cir.getReturnValue();
-		cir.setReturnValue(original.or(stack -> stack.isOf(Items.SNOWBALL)).or(stack -> stack.isOf(Items.WIND_CHARGE)));
+		cir.setReturnValue(original
+				.or(stack -> isExplosiveFireworkRocket(stack))
+				.or(stack -> stack.isOf(Items.SNOWBALL))
+				.or(stack -> stack.isOf(Items.WIND_CHARGE)));
 	}
 
 	@Inject(at = @At("HEAD"), method = "createArrowEntity", cancellable = true)
