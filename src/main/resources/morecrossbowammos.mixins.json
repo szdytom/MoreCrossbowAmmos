@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "morecrossbowammos.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"CrossbowItemMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "morecrossbowammos",
+	"version": "${version}",
+	"name": "MoreCrossbowAmmos",
+	"description": "MoreCrossbowAmmos makes more vanilla items shootable from crossbows!",
+	"authors": [
+		"fang_erj"
+	],
+	"contact": {
+		"homepage": "https://github.com/szdytom",
+		"sources": "https://github.com/szdytom/MoreCrossbowAmmos"
+	},
+	"license": "MIT",
+	"icon": "assets/morecrossbowammos/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"morecrossbowammos.MoreCrossbowAmmos"
+		]
+	},
+	"mixins": [
+		"morecrossbowammos.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.2",
+		"minecraft": "~1.21.8",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {}
+}
