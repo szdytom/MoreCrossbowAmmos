@@ -3,6 +3,7 @@ package morecrossbowammos.mixin;
 import java.util.function.Predicate;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -12,6 +13,7 @@ import net.minecraft.component.type.ChargedProjectilesComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.TridentEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.EggEntity;
 import net.minecraft.entity.projectile.thrown.SnowballEntity;
@@ -24,6 +26,23 @@ import net.minecraft.entity.EntityType;
 
 @Mixin(CrossbowItem.class)
 public abstract class CrossbowItemMixin {
+	@Unique
+	private static final Predicate<ItemStack> newProjectiles() {
+		Predicate<ItemStack> predicate = stack -> isExplosiveFireworkRocket(stack);
+		predicate = predicate.or(stack -> stack.isOf(Items.SNOWBALL));
+		predicate = predicate.or(stack -> stack.isIn(ItemTags.EGGS));
+		predicate = predicate.or(stack -> stack.isOf(Items.WIND_CHARGE));
+		return predicate;
+	}
+
+	@Unique
+	private static final Predicate<ItemStack> newHeldProjectiles() {
+		Predicate<ItemStack> predicate = newProjectiles();
+		predicate = predicate.or(stack -> stack.isOf(Items.TRIDENT));
+		return predicate;
+	}
+
+	@Unique
 	private static boolean isExplosiveFireworkRocket(ItemStack stack) {
 		if (!stack.isOf(Items.FIREWORK_ROCKET)) {
 			return false;
@@ -31,14 +50,14 @@ public abstract class CrossbowItemMixin {
 		return stack.get(DataComponentTypes.FIREWORKS).explosions().size() > 0;
 	}
 
-	@Inject(at = @At("RETURN"), method = { "getHeldProjectiles", "getProjectiles" }, cancellable = true)
+	@Inject(at = @At("RETURN"), method = "getProjectiles", cancellable = true)
 	private void getProjectiles(CallbackInfoReturnable<Predicate<ItemStack>> cir) {
-		Predicate<ItemStack> original = cir.getReturnValue();
-		cir.setReturnValue(original
-				.or(stack -> isExplosiveFireworkRocket(stack))
-				.or(stack -> stack.isOf(Items.SNOWBALL))
-				.or(stack -> stack.isIn(ItemTags.EGGS))
-				.or(stack -> stack.isOf(Items.WIND_CHARGE)));
+		cir.setReturnValue(cir.getReturnValue().or(newProjectiles()));
+	}
+
+	@Inject(at = @At("RETURN"), method = "getHeldProjectiles", cancellable = true)
+	private void getHeldProjectiles(CallbackInfoReturnable<Predicate<ItemStack>> cir) {
+		cir.setReturnValue(cir.getReturnValue().or(newHeldProjectiles()));
 	}
 
 	@Inject(at = @At("HEAD"), method = "createArrowEntity", cancellable = true)
@@ -73,6 +92,13 @@ public abstract class CrossbowItemMixin {
 			}
 			return;
 		}
+
+		if (projectileStack.isOf(Items.TRIDENT)) {
+			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
+			tridentEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			cir.setReturnValue(tridentEntity);
+			return;
+		}
 	}
 
 	@Inject(at = @At("HEAD"), method = "getSpeed", cancellable = true)
@@ -91,6 +117,11 @@ public abstract class CrossbowItemMixin {
 			cir.setReturnValue(2.0F);
 			return;
 		}
+
+		if (stack.contains(Items.TRIDENT)) {
+			cir.setReturnValue(3.1F);
+			return;
+		}
 	}
 
 	@Inject(at = @At("HEAD"), method = "getWeaponStackDamage", cancellable = true)
@@ -107,6 +138,11 @@ public abstract class CrossbowItemMixin {
 
 		if (ammo.isOf(Items.WIND_CHARGE)) {
 			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.TRIDENT)) {
+			cir.setReturnValue(3);
 			return;
 		}
 	}
