@@ -1,9 +1,13 @@
 package morecrossbowammos.mixin;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,9 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import morecrossbowammos.MoreCrossbowAmmos;
+import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ChargedProjectilesComponent;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.TntEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.FireballEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -30,13 +37,21 @@ import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundEvents;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.stat.Stats;
 
 @Mixin(CrossbowItem.class)
 public abstract class CrossbowItemMixin {
+	@Shadow
+	protected abstract int getWeaponStackDamage(ItemStack projectile);
+
 	@Unique
 	private static final Predicate<ItemStack> newProjectiles() {
 		Predicate<ItemStack> predicate = stack -> isExplosiveFireworkRocket(stack);
@@ -48,6 +63,7 @@ public abstract class CrossbowItemMixin {
 		predicate = predicate.or(stack -> stack.isOf(Items.EXPERIENCE_BOTTLE));
 		predicate = predicate.or(stack -> stack.isOf(Items.SPLASH_POTION));
 		predicate = predicate.or(stack -> stack.isOf(Items.LINGERING_POTION));
+		predicate = predicate.or(stack -> stack.isOf(Items.TNT));
 		return predicate;
 	}
 
@@ -215,6 +231,11 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (stack.contains(Items.TNT)) {
+			cir.setReturnValue(1.6F);
+			return;
+		}
+
 		if (stack.contains(Items.TRIDENT)) {
 			cir.setReturnValue(3.1F);
 			return;
@@ -268,6 +289,11 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (ammo.isOf(Items.TNT)) {
+			cir.setReturnValue(5);
+			return;
+		}
+
 		if (ammo.isOf(Items.TRIDENT)) {
 			cir.setReturnValue(3);
 			return;
@@ -289,6 +315,95 @@ public abstract class CrossbowItemMixin {
 			Vec3d velocity = projectile.getVelocity().normalize().multiply(2.0);
 			Vec3d pos = projectile.getPos();
 			projectile.setPosition(velocity.add(pos));
+		}
+	}
+
+	@Unique
+	private Entity createNonProjectileEntity(World world, ItemStack stack, LivingEntity shooter) {
+		if (stack.isOf(Items.TNT)) {
+			TntEntity tntEntity = new TntEntity(world, shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ(),
+					shooter);
+			return tntEntity;
+		}
+		return null;
+	}
+
+	@Unique
+	protected void shootNonProjectile(LivingEntity shooter, Entity entity, int index, float speed,
+			float divergence, float yaw, @Nullable LivingEntity target) {
+		Vector3f vector3f;
+		if (target != null) {
+			double d = target.getX() - shooter.getX();
+			double e = target.getZ() - shooter.getZ();
+			double f = Math.sqrt(d * d + e * e);
+			double g = target.getBodyY(0.3333333333333333) - entity.getY() + f * 0.2F;
+			vector3f = CrossbowItem.calcVelocity(shooter, new Vec3d(d, g, e), yaw);
+		} else {
+			Vec3d vec3d = shooter.getOppositeRotationVector(1.0F);
+			Quaternionf quaternionf = new Quaternionf().setAngleAxis((double) (yaw * (float) (Math.PI / 180.0)),
+					vec3d.x, vec3d.y, vec3d.z);
+			Vec3d vec3d2 = shooter.getRotationVec(1.0F);
+			vector3f = vec3d2.toVector3f().rotate(quaternionf);
+		}
+
+		vector3f = vector3f.normalize().mul(speed);
+		entity.setVelocity(vector3f.x(), vector3f.y(), vector3f.z());
+		float h = CrossbowItem.getSoundPitch(shooter.getRandom(), index);
+		shooter.getWorld().playSound(null, shooter.getX(), shooter.getY(),
+				shooter.getZ(),
+				SoundEvents.ITEM_CROSSBOW_SHOOT, shooter.getSoundCategory(), 1.0F, h);
+	}
+
+	@Unique
+	private void shootAllNonProjectiles(ServerWorld world, LivingEntity shooter, Hand hand, ItemStack stack,
+			float speed,
+			float divergence, List<ItemStack> projectiles, @Nullable LivingEntity target) {
+		float f = EnchantmentHelper.getProjectileSpread(world, stack, shooter, 0.0F);
+		float g = projectiles.size() == 1 ? 0.0F : 2.0F * f / (projectiles.size() - 1);
+		float h = (projectiles.size() - 1) % 2 * g / 2.0F;
+		float i = 1.0F;
+
+		for (int j = 0; j < projectiles.size(); j++) {
+			ItemStack itemStack = projectiles.get(j);
+			if (!itemStack.isEmpty()) {
+				float k = h + i * ((j + 1) / 2) * g;
+				i = -i;
+				Entity entity = createNonProjectileEntity(world, itemStack, shooter);
+				if (entity == null) {
+					continue;
+				}
+				shootNonProjectile(shooter, entity, j, speed, divergence, k, target);
+				world.spawnEntity(entity);
+				stack.damage(this.getWeaponStackDamage(itemStack), shooter, LivingEntity.getSlotForHand(hand));
+				if (stack.isEmpty()) {
+					break;
+				}
+			}
+		}
+	}
+
+	@Inject(at = @At("HEAD"), method = "shootAll", cancellable = true)
+	public void shootAll(World world, LivingEntity shooter, Hand hand, ItemStack stack, float speed, float divergence,
+			@Nullable LivingEntity target, CallbackInfo ci) {
+		if (world instanceof ServerWorld serverWorld) {
+			ChargedProjectilesComponent chargedProjectiles = stack.get(DataComponentTypes.CHARGED_PROJECTILES);
+			if (chargedProjectiles == null || chargedProjectiles.isEmpty()) {
+				return;
+			}
+
+			Predicate<ItemStack> isNonProjectile = itemstack -> itemstack.isOf(Items.TNT);
+
+			if (chargedProjectiles.getProjectiles().stream().anyMatch(isNonProjectile)) {
+				shootAllNonProjectiles(serverWorld, shooter, hand, stack, speed, divergence,
+						chargedProjectiles.getProjectiles(), target);
+				stack.set(DataComponentTypes.CHARGED_PROJECTILES, ChargedProjectilesComponent.DEFAULT);
+				if (shooter instanceof ServerPlayerEntity serverPlayer) {
+					Criteria.SHOT_CROSSBOW.trigger(serverPlayer, stack);
+					serverPlayer.incrementStat(Stats.USED.getOrCreateStat(stack.getItem()));
+				}
+				ci.cancel();
+				return;
+			}
 		}
 	}
 }

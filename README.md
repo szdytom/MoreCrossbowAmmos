@@ -16,6 +16,7 @@ A Minecraft mod that adds more vanilla items shootable from crossbows. This mod 
 | Bottle o' Enchanting | Experience Bottle | No				 | 1			   |
 | Splash Potion | Splash Potion   | No				 | 1			   |
 | Lingering Potion | Lingering Potion | No				 | 1			   |
+| TNT		   | TNT			 | No				 | 5			   |
 | Trident       | Trident         | Yes                | 3               |
 | Blaze Powder | Small Fireball  | Yes				| 3               |
 
