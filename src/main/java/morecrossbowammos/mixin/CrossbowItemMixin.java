@@ -8,10 +8,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import morecrossbowammos.MoreCrossbowAmmos;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ChargedProjectilesComponent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.projectile.FireballEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.TridentEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
@@ -21,6 +23,8 @@ import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.entity.EntityType;
 
@@ -32,6 +36,7 @@ public abstract class CrossbowItemMixin {
 		predicate = predicate.or(stack -> stack.isOf(Items.SNOWBALL));
 		predicate = predicate.or(stack -> stack.isIn(ItemTags.EGGS));
 		predicate = predicate.or(stack -> stack.isOf(Items.WIND_CHARGE));
+		predicate = predicate.or(stack -> stack.isOf(Items.FIRE_CHARGE));
 		return predicate;
 	}
 
@@ -93,6 +98,20 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (projectileStack.isOf(Items.FIRE_CHARGE)) {
+			int explosionPower = 2;
+			if (world instanceof ServerWorld serverWorld) {
+				explosionPower = serverWorld.getGameRules().getInt(MoreCrossbowAmmos.CROSSBOW_FIREBALL_POWER);
+			}
+
+			// velocity is set later in CrossbowItem#shootAll
+			// use Vec3d.ZERO as a placeholder here
+			FireballEntity fireballEntity = new FireballEntity(world, shooter, Vec3d.ZERO, explosionPower);
+			fireballEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			cir.setReturnValue(fireballEntity);
+			return;
+		}
+
 		if (projectileStack.isOf(Items.TRIDENT)) {
 			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
 			tridentEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
@@ -114,7 +133,12 @@ public abstract class CrossbowItemMixin {
 		}
 
 		if (stack.contains(Items.WIND_CHARGE)) {
-			cir.setReturnValue(2.0F);
+			cir.setReturnValue(2.2F);
+			return;
+		}
+
+		if (stack.contains(Items.FIRE_CHARGE)) {
+			cir.setReturnValue(2.2F);
 			return;
 		}
 
@@ -138,6 +162,11 @@ public abstract class CrossbowItemMixin {
 
 		if (ammo.isOf(Items.WIND_CHARGE)) {
 			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.FIRE_CHARGE)) {
+			cir.setReturnValue(5);
 			return;
 		}
 
