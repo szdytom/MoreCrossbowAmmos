@@ -2,10 +2,12 @@ package morecrossbowammos.mixin;
 
 import java.util.function.Predicate;
 
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import morecrossbowammos.MoreCrossbowAmmos;
@@ -92,7 +94,7 @@ public abstract class CrossbowItemMixin {
 			} else {
 				WindChargeEntity windChargeEntity = new WindChargeEntity(EntityType.WIND_CHARGE, world);
 				windChargeEntity.setOwner(shooter);
-				windChargeEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+				windChargeEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
 				cir.setReturnValue(windChargeEntity);
 			}
 			return;
@@ -107,14 +109,14 @@ public abstract class CrossbowItemMixin {
 			// velocity is set later in CrossbowItem#shootAll
 			// use Vec3d.ZERO as a placeholder here
 			FireballEntity fireballEntity = new FireballEntity(world, shooter, Vec3d.ZERO, explosionPower);
-			fireballEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			fireballEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
 			cir.setReturnValue(fireballEntity);
 			return;
 		}
 
 		if (projectileStack.isOf(Items.TRIDENT)) {
 			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
-			tridentEntity.setPos(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			tridentEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
 			cir.setReturnValue(tridentEntity);
 			return;
 		}
@@ -173,6 +175,19 @@ public abstract class CrossbowItemMixin {
 		if (ammo.isOf(Items.TRIDENT)) {
 			cir.setReturnValue(3);
 			return;
+		}
+	}
+
+	@Inject(at = @At("TAIL"), method = "shoot")
+	protected void shootFireball(LivingEntity shooter, ProjectileEntity projectile, int index, float speed,
+			float divergence,
+			float yaw, @Nullable LivingEntity target, CallbackInfo ci) {
+		if (projectile instanceof FireballEntity) {
+			// Move the fireball a bit forward so it doesn't collide with each other in a
+			// multi-shot scenario
+			Vec3d velocity = projectile.getVelocity().normalize().multiply(2.0);
+			Vec3d pos = projectile.getPos();
+			projectile.setPosition(velocity.add(pos));
 		}
 	}
 }
