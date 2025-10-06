@@ -17,6 +17,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.FireballEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.entity.projectile.SmallFireballEntity;
 import net.minecraft.entity.projectile.TridentEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.EggEntity;
@@ -54,6 +55,7 @@ public abstract class CrossbowItemMixin {
 	private static final Predicate<ItemStack> newHeldProjectiles() {
 		Predicate<ItemStack> predicate = newProjectiles();
 		predicate = predicate.or(stack -> stack.isOf(Items.TRIDENT));
+		predicate = predicate.or(stack -> stack.isOf(Items.BLAZE_POWDER));
 		return predicate;
 	}
 
@@ -162,6 +164,13 @@ public abstract class CrossbowItemMixin {
 			cir.setReturnValue(tridentEntity);
 			return;
 		}
+
+		if (projectileStack.isOf(Items.BLAZE_POWDER)) {
+			SmallFireballEntity smallFireballEntity = new SmallFireballEntity(world, shooter, Vec3d.ZERO);
+			smallFireballEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			cir.setReturnValue(smallFireballEntity);
+			return;
+		}
 	}
 
 	@Inject(at = @At("HEAD"), method = "getSpeed", cancellable = true)
@@ -210,6 +219,11 @@ public abstract class CrossbowItemMixin {
 			cir.setReturnValue(3.1F);
 			return;
 		}
+
+		if (stack.contains(Items.BLAZE_POWDER)) {
+			cir.setReturnValue(3.1F);
+			return;
+		}
 	}
 
 	@Inject(at = @At("HEAD"), method = "getWeaponStackDamage", cancellable = true)
@@ -255,6 +269,11 @@ public abstract class CrossbowItemMixin {
 		}
 
 		if (ammo.isOf(Items.TRIDENT)) {
+			cir.setReturnValue(3);
+			return;
+		}
+
+		if (ammo.isOf(Items.BLAZE_POWDER)) {
 			cir.setReturnValue(3);
 			return;
 		}
