@@ -21,6 +21,7 @@ import net.minecraft.entity.projectile.TridentEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.EggEntity;
 import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
+import net.minecraft.entity.projectile.thrown.ExperienceBottleEntity;
 import net.minecraft.entity.projectile.thrown.SnowballEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -41,6 +42,7 @@ public abstract class CrossbowItemMixin {
 		predicate = predicate.or(stack -> stack.isOf(Items.WIND_CHARGE));
 		predicate = predicate.or(stack -> stack.isOf(Items.FIRE_CHARGE));
 		predicate = predicate.or(stack -> stack.isOf(Items.ENDER_PEARL));
+		predicate = predicate.or(stack -> stack.isOf(Items.EXPERIENCE_BOTTLE));
 		return predicate;
 	}
 
@@ -123,6 +125,15 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (projectileStack.isOf(Items.EXPERIENCE_BOTTLE)) {
+			ExperienceBottleEntity experienceBottleEntity = new ExperienceBottleEntity(world, shooter.getX(),
+					shooter.getEyeY() - 0.15F,
+					shooter.getZ(), projectileStack);
+			experienceBottleEntity.setOwner(shooter);
+			cir.setReturnValue(experienceBottleEntity);
+			return;
+		}
+
 		if (projectileStack.isOf(Items.TRIDENT)) {
 			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
 			tridentEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
@@ -158,6 +169,11 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (stack.contains(Items.EXPERIENCE_BOTTLE)) {
+			cir.setReturnValue(2.6F);
+			return;
+		}
+
 		if (stack.contains(Items.TRIDENT)) {
 			cir.setReturnValue(3.1F);
 			return;
@@ -187,6 +203,11 @@ public abstract class CrossbowItemMixin {
 		}
 
 		if (ammo.isOf(Items.ENDER_PEARL)) {
+			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.EXPERIENCE_BOTTLE)) {
 			cir.setReturnValue(1);
 			return;
 		}
