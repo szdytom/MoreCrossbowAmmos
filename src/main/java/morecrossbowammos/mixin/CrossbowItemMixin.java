@@ -22,7 +22,9 @@ import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.EggEntity;
 import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
 import net.minecraft.entity.projectile.thrown.ExperienceBottleEntity;
+import net.minecraft.entity.projectile.thrown.LingeringPotionEntity;
 import net.minecraft.entity.projectile.thrown.SnowballEntity;
+import net.minecraft.entity.projectile.thrown.SplashPotionEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -43,6 +45,8 @@ public abstract class CrossbowItemMixin {
 		predicate = predicate.or(stack -> stack.isOf(Items.FIRE_CHARGE));
 		predicate = predicate.or(stack -> stack.isOf(Items.ENDER_PEARL));
 		predicate = predicate.or(stack -> stack.isOf(Items.EXPERIENCE_BOTTLE));
+		predicate = predicate.or(stack -> stack.isOf(Items.SPLASH_POTION));
+		predicate = predicate.or(stack -> stack.isOf(Items.LINGERING_POTION));
 		return predicate;
 	}
 
@@ -134,6 +138,24 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (projectileStack.isOf(Items.SPLASH_POTION)) {
+			SplashPotionEntity splashPotionEntity = new SplashPotionEntity(world, shooter.getX(),
+					shooter.getEyeY() - 0.15F,
+					shooter.getZ(), projectileStack);
+			splashPotionEntity.setOwner(shooter);
+			cir.setReturnValue(splashPotionEntity);
+			return;
+		}
+
+		if (projectileStack.isOf(Items.LINGERING_POTION)) {
+			LingeringPotionEntity lingeringPotionEntity = new LingeringPotionEntity(world, shooter.getX(),
+					shooter.getEyeY() - 0.15F,
+					shooter.getZ(), projectileStack);
+			lingeringPotionEntity.setOwner(shooter);
+			cir.setReturnValue(lingeringPotionEntity);
+			return;
+		}
+
 		if (projectileStack.isOf(Items.TRIDENT)) {
 			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
 			tridentEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
@@ -174,6 +196,16 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (stack.contains(Items.SPLASH_POTION)) {
+			cir.setReturnValue(2.6F);
+			return;
+		}
+
+		if (stack.contains(Items.LINGERING_POTION)) {
+			cir.setReturnValue(2.6F);
+			return;
+		}
+
 		if (stack.contains(Items.TRIDENT)) {
 			cir.setReturnValue(3.1F);
 			return;
@@ -208,6 +240,16 @@ public abstract class CrossbowItemMixin {
 		}
 
 		if (ammo.isOf(Items.EXPERIENCE_BOTTLE)) {
+			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.SPLASH_POTION)) {
+			cir.setReturnValue(1);
+			return;
+		}
+
+		if (ammo.isOf(Items.LINGERING_POTION)) {
 			cir.setReturnValue(1);
 			return;
 		}
