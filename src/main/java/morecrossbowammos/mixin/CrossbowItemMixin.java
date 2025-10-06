@@ -20,6 +20,7 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.TridentEntity;
 import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.EggEntity;
+import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
 import net.minecraft.entity.projectile.thrown.SnowballEntity;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -39,6 +40,7 @@ public abstract class CrossbowItemMixin {
 		predicate = predicate.or(stack -> stack.isIn(ItemTags.EGGS));
 		predicate = predicate.or(stack -> stack.isOf(Items.WIND_CHARGE));
 		predicate = predicate.or(stack -> stack.isOf(Items.FIRE_CHARGE));
+		predicate = predicate.or(stack -> stack.isOf(Items.ENDER_PEARL));
 		return predicate;
 	}
 
@@ -114,6 +116,13 @@ public abstract class CrossbowItemMixin {
 			return;
 		}
 
+		if (projectileStack.isOf(Items.ENDER_PEARL)) {
+			EnderPearlEntity enderPearlEntity = new EnderPearlEntity(world, shooter, projectileStack);
+			enderPearlEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
+			cir.setReturnValue(enderPearlEntity);
+			return;
+		}
+
 		if (projectileStack.isOf(Items.TRIDENT)) {
 			TridentEntity tridentEntity = new TridentEntity(world, shooter, projectileStack);
 			tridentEntity.setPosition(shooter.getX(), shooter.getEyeY() - 0.15F, shooter.getZ());
@@ -135,12 +144,17 @@ public abstract class CrossbowItemMixin {
 		}
 
 		if (stack.contains(Items.WIND_CHARGE)) {
-			cir.setReturnValue(2.2F);
+			cir.setReturnValue(3.1F);
 			return;
 		}
 
 		if (stack.contains(Items.FIRE_CHARGE)) {
-			cir.setReturnValue(2.2F);
+			cir.setReturnValue(3.1F);
+			return;
+		}
+
+		if (stack.contains(Items.ENDER_PEARL)) {
+			cir.setReturnValue(2.6F);
 			return;
 		}
 
@@ -169,6 +183,11 @@ public abstract class CrossbowItemMixin {
 
 		if (ammo.isOf(Items.FIRE_CHARGE)) {
 			cir.setReturnValue(5);
+			return;
+		}
+
+		if (ammo.isOf(Items.ENDER_PEARL)) {
+			cir.setReturnValue(1);
 			return;
 		}
 
